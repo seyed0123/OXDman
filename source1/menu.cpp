@@ -45,6 +45,7 @@ void showMenu()
 	cin>>input;
 	if(input=='1')
 	{
+		newGame();
 		return;
 	}else if(input =='2')
 	{
