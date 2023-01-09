@@ -1,35 +1,42 @@
-#include <iostream>
-#include <vector>
-#include <map>
-#include <algorithm>
+#include "Vector.cpp"
 #include "Miscellaneous.cpp"
 
-using Maze = std::vector<std::vector<int>>;
-using Connection = std::map<std::vector<int>, std::vector<std::vector<int>>>;
+using Maze = Vector2d;
+using Connection = VectorMap;
 
 
-Maze createEmptyMaze(int weidth, int height) {
-    Maze maze;
-    for(int i = 0; i < height; i++) {
-        std::vector<int> row;
-        for(int j = 0; j < weidth; j++) {
-            row.push_back(0);
-        }
-        maze.push_back(row);
-    }
-    return maze;
-}
+bool isValidPosition(int x, int y, int width, int height);
+bool canNewBlockFit(Maze& maze, int x, int y, int width, int height);
+void addWallBlock(Maze& maze, int x, int y);
+Vector2d getPossibleStarts(Maze& maze);
+Connection getConnections(Maze& maze, Vector2d& possibleStarts);
+void addConnection(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int dx, int dy);
+void connect(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int x0, int y0);
+bool isWallBlockFilled(Maze& maze, int x, int y);
+void expand(Maze& maze, Connection& connections, Vector2d& visited, int x, int y);
+void expandWall(Maze& maze, Connection& connections, int x, int y);
+void printMaze(Maze maze);
+Maze createEmptyMazeWithGhost(int width, int height);
+bool addRandomBlock(Maze& maze);
+Maze removeLastAxis(Maze maze);
+Maze addPointsToMaze(Maze maze);
+Maze addGhostHouse(Maze maze);
+Maze addSymmetryToMaze(Maze maze);
+Maze createRandomMaze(int width, int height);
+bool isDesirable(Maze maze);
+Maze createDesirableMaze(int width, int height);
 
-bool isValidPosition(int x, int y, int weidth, int height) {
-    if(x < 0 || x >= weidth || y < 0 || y >= height) {
+
+bool isValidPosition(int x, int y, int width, int height) {
+    if(x < 0 || x >= width || y < 0 || y >= height) {
         return false;
     } else {
         return true;
     }
 }
 
-bool canNewBlockFit(Maze& maze, int x, int y, int weidth, int height) {
-    if(isValidPosition(x, y, weidth, height) && isValidPosition(x+3, y+3, weidth, height)) {
+bool canNewBlockFit(Maze& maze, int x, int y, int width, int height) {
+    if(isValidPosition(x, y, width, height) && isValidPosition(x+3, y+3, width, height)) {
         for(int j = y; j < y+4; j++) {
             for(int i = x; i < x+4; i++) {
                 if(maze[j][i] != 0) {
@@ -43,27 +50,38 @@ bool canNewBlockFit(Maze& maze, int x, int y, int weidth, int height) {
     }
 }
 
-std::vector<std::vector<int>> getPossibleStarts(Maze& maze) {
-    std::vector<std::vector<int>> possibleStarts;
+void addWallBlock(Maze& maze, int x, int y) {
+        for(int i = x+1; i <= x+2; i++) {
+            for(int j = y+1; j <= y+2; j++) {
+                maze.change(j, i, 1);
+            }
+        }
+}
+
+Vector2d getPossibleStarts(Maze& maze) {
+    Vector2d possibleStarts;
     for(int y = 0; y < maze.size(); y++) {
         for(int x = 0; x < maze[0].size(); x++) {
             if(canNewBlockFit(maze, x, y, maze[0].size(), maze.size())) {
-                std::vector<int> position = {x, y};
+                Vector1d position;
+                position.push_back(x);
+                position.push_back(y);
                 possibleStarts.push_back(position);
             }
         }
     }
     return possibleStarts;
 }
-void addConnection(Maze& maze, Connection& connections, std::vector<std::vector<int>>& possibleStarts, int x, int y, int dx, int dy);
-void connect(Maze& maze, Connection& connections, std::vector<std::vector<int>>& possibleStarts, int x, int y, int x0, int y0);
 
-Connection getConnections(Maze& maze, std::vector<std::vector<int>>& possibleStarts) {
+Connection getConnections(Maze& maze, Vector2d& possibleStarts) {
     Connection connections;
     for(int y = 0; y < maze.size(); y++) {
         for(int x = 0; x < maze[0].size(); x++) {
-            std::vector<int> position = {x, y};
-            if(std::find(possibleStarts.begin(), possibleStarts.end(), position) != possibleStarts.end()) {
+            Vector1d position;
+            position.push_back(x);
+            position.push_back(y);
+            
+            if(possibleStarts.contains(position)) {
                 for(int y0 = 0; y0 < 4; y0++) {
                     if(!isValidPosition(x-1, y+y0, maze[0].size(), maze.size())) {
                         continue;
@@ -107,31 +125,41 @@ Connection getConnections(Maze& maze, std::vector<std::vector<int>>& possibleSta
     return connections;
 }
 
-void addConnection(Maze& maze, Connection& connections, std::vector<std::vector<int>>& possibleStarts, int x, int y, int dx, int dy) {
-    std::vector<int> source = {x, y};
-    if(std::find(possibleStarts.begin(), possibleStarts.end(), source) != possibleStarts.end()) {
+void addConnection(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int dx, int dy) {
+    Vector1d source;
+    source.push_back(x);
+    source.push_back(y);
+    if(possibleStarts.contains(source)) {
         connect(maze, connections, possibleStarts, x, y, x+dx, y+dy);
         connect(maze, connections, possibleStarts, x, y, x+2*dx, y+2*dy);
-        source = {x-dy, y-dx};
-        if(std::find(possibleStarts.begin(), possibleStarts.end(), source) != possibleStarts.end()) {
+        Vector1d source2;
+        source2.push_back(x-dy);
+        source2.push_back(y-dx);
+        if(possibleStarts.contains(source2)) {
             
         } else {
             connect(maze, connections, possibleStarts, x, y, x+dx-dy, y+dy-dx);
         }
-        source = {x+dy, y+dx};
-        if(std::find(possibleStarts.begin(), possibleStarts.end(), source) != possibleStarts.end()) {
+        Vector1d source3;
+        source3.push_back(x+dy);
+        source3.push_back(y+dx);
+        if(possibleStarts.contains(source3)) {
             
         } else {
             connect(maze, connections, possibleStarts, x, y, x+dx+dy, y+dy+dx);
         }
-        source = {x+dx-dy, y+dy-dx};
-        if(std::find(possibleStarts.begin(), possibleStarts.end(), source) != possibleStarts.end()) {
+        Vector1d source4;
+        source4.push_back(x+dx-dy);
+        source4.push_back(y+dy-dx);
+        if(possibleStarts.contains(source4)) {
             
         } else {
             connect(maze, connections, possibleStarts, x, y, x+2*dx-dy, y+2*dy-dx);
         }
-        source = {x+dx+dy, y+dy+dx};
-        if(std::find(possibleStarts.begin(), possibleStarts.end(), source) != possibleStarts.end()) {
+        Vector1d source5;
+        source5.push_back(x+dx+dy);
+        source5.push_back(y+dy+dx);
+        if(possibleStarts.contains(source5)) {
 
         } else {
             connect(maze, connections, possibleStarts, x, y, x+2*dx+dy, y+2*dy+dx);
@@ -139,57 +167,237 @@ void addConnection(Maze& maze, Connection& connections, std::vector<std::vector<
     }
 }
 
-void connect(Maze& maze, Connection& connections, std::vector<std::vector<int>>& possibleStarts, int x, int y, int x0, int y0) {
-    std::vector<int> source = {x, y};
-    std::vector<int> destination = {x0, y0};
-    if(std::find(possibleStarts.begin(), possibleStarts.end(), destination) != possibleStarts.end()) {
-        if(connections.count(destination) == 0) {
-            connections[destination] = {source};
-        } else {
-            connections[destination].push_back(source);
-        }
+void connect(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int x0, int y0) {
+    Vector1d source;
+    source.push_back(x);
+    source.push_back(y);
+    Vector1d destination;
+    destination.push_back(x0);
+    destination.push_back(y0);
+    
+    if(possibleStarts.contains(destination)) {
+        connections.add(destination, source);
     } else {
         return;
     }
 }
 
-void expandWall(Maze& maze, Connection& connections);
+bool isWallBlockFilled(Maze& maze, int x, int y) {
+    for(int dy = 1; dy < 3; dy++) {
+        for(int dx = 1; dx < 3; dx++) {
+            if(!isValidPosition(x+dx, y+dy, maze[0].size(), maze.size())) {
+                return false;
+            }
+
+            if(maze[y+dy][x+dx] != 1) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void expand(Maze& maze, Connection& connections, Vector2d& visited, int x, int y) {
+    Vector1d source;
+    source.push_back(x);
+    source.push_back(y);
+    if(visited.contains(source)) {
+        return;
+    }
+
+    visited.push_back(source);
+    // isInConnections(connections, source)
+    if(connections.keyExists(source)) {
+        Vector2d connection = connections.getValue(source);
+        for(int i = 0; i < connection.size(); i++) {
+            int x0 = connection[i][0];
+            int y0 = connection[i][1];
+
+            if(!isWallBlockFilled(maze, x0, y0)) {
+                addWallBlock(maze, x0, y0);
+            }
+            expand(maze, connections, visited, x0, y0);
+        }
+    }
+}
+
+void expandWall(Maze& maze, Connection& connections, int x, int y) {
+    Vector2d visited;
+    expand(maze, connections, visited, x, y);
+}
+
+void printMaze(Maze maze) {
+    for(int i = 0; i < maze.size(); i++) {
+        for(int j = 0; j < maze[i].size(); j++) {
+            if(maze[i][j] == 0) {
+                std::cout << ' ';
+            } else if(maze[i][j] == 1) {
+                std::cout << '|';
+            } else if(maze[i][j] == 2) {
+                std::cout << '.';
+            } else if(maze[i][j] == -1) {
+                std::cout << '-';
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
+Maze createEmptyMazeWithGhost(int width, int height) {
+    Maze maze;
+    Vector1d topWall;
+    for(int j = 0; j < width; j++) {
+        topWall.push_back(1);
+    }
+    maze.push_back(topWall);
+
+    for(int i = 1; i < (height-5)/2 - 1; i++) {
+        Vector1d row;
+        row.push_back(1);
+        for(int j = 1; j < width-1; j++) {
+            row.push_back(0);
+        }
+        row.push_back(0);
+        maze.push_back(row);
+    }
+
+    for(int i = (height-5)/2 - 1; i < (height-5)/2 + 4; i++) {
+        Vector1d row;
+        row.push_back(1);
+        for(int j = 1; j < width-6; j++) {
+            row.push_back(0);
+        }
+      for(int j = width-6; j < width; j++) {
+            row.push_back(1);
+        }
+        maze.push_back(row);
+    }
+
+    for(int i = (height-5)/2 + 4; i < height-1; i++) {
+        Vector1d row;
+        row.push_back(1);
+        for(int j = 1; j < width-1; j++) {
+            row.push_back(0);
+        }
+        row.push_back(0);
+        maze.push_back(row);
+    }
+
+    Vector1d bottomWall;
+    for(int j = 0; j < width; j++) {
+        bottomWall.push_back(1);
+    }
+    maze.push_back(bottomWall);
+
+    return maze;
+}
 
 bool addRandomBlock(Maze& maze) {
-    std::vector<std::vector<int>> possibleStarts = getPossibleStarts(maze);
+    Vector2d possibleStarts = getPossibleStarts(maze);
     Connection connections = getConnections(maze, possibleStarts);
-    // std::cout << connections.size() << std::endl;
     if(possibleStarts.size() == 0) {
         return false;
     } else {
-        std::vector<int> position = possibleStarts[getRandomInt(0, possibleStarts.size()-1)];
+        Vector1d position = possibleStarts[getRandomInt(0, possibleStarts.size()-1)];
         int x = position[0];
         int y = position[1];
 
         for(int i = x+1; i <= x+2; i++) {
             for(int j = y+1; j <= y+2; j++) {
-                maze[j][i] = 1;
+                maze.change(j, i, 1);
             }
         }
 
-        expandWall(maze, connections);
+        expandWall(maze, connections, x, y);
 
         return true;
     }
 }
 
-int main() {
-    Maze maze = createEmptyMaze(16,31);
+Maze removeLastAxis(Maze maze) {
+    Maze newMaze;
+    for(int i = 0; i < maze.size(); i++) {
+        Vector1d row;
+        for(int j = 0; j < maze[i].size()-1; j++) {
+            row.push_back(maze[i][j]);
+        }
+        newMaze.push_back(row);
+    }
+    return newMaze;
+}
 
+Maze addPointsToMaze(Maze maze) {
+    for(int y = 0; y < maze.size(); y++) {
+        for(int x = 0; x < maze[0].size(); x++) {
+            if(maze[y][x] == 0) {
+                maze.change(y, x, 2);
+            }
+        }
+    }
+    return maze;
+}
+
+Maze addGhostHouse(Maze maze) {
+    int height = maze.size();
+    int width = maze[0].size();
+    maze.change((height-5)/2 - 1, width-2, -1);
+    maze.change((height-5)/2 - 1, width-1, -1);
+    for(int i = (height-5)/2; i < (height-5)/2 + 3; i++) {
+        for(int j = width-3; j < width; j++) {
+            maze.change(i, j, 0);
+        }
+    }
+    return maze;
+}
+
+Maze addSymmetryToMaze(Maze maze) {
+    Maze symmetricalMaze;
+    for(int i = 0; i < maze.size(); i++) {
+        Vector1d row;
+        for(int j = 0; j < maze[0].size()-2; j++) {
+            row.push_back(maze[i][j]);
+        }
+        for(int j = maze[0].size()-2; j < maze[0].size(); j++) {
+            row.push_back(maze[i][j]);
+        }
+        for(int j = maze[0].size()-3; j >= 0; j--) {
+            row.push_back(maze[i][j]);
+        }
+        symmetricalMaze.push_back(row);
+    }
+    return symmetricalMaze;
+}
+
+Maze createRandomMaze(int width, int height) {
+    width = width/2 + 2;
+    Maze maze = createEmptyMazeWithGhost(width, height);
     while(addRandomBlock(maze)) {
         continue;
     }
+    maze = removeLastAxis(maze);
+    maze = addPointsToMaze(maze);
+    maze = addGhostHouse(maze);
+    maze = addSymmetryToMaze(maze);
+    return maze;
+}
 
-    for(int y = 0; y < 31; y++) {
-        for(int x = 0; x < 16; x++) {
-            std::cout << maze[y][x] << ' ';
+// Check whether the maze is desirable(no path has width or height more than one)
+bool isDesirable(Maze maze) {
+    int x = maze[0].size() / 2 - 1;
+    for(int i = 0; i < maze.size()-1; i++) {
+        if(maze[i][x] == 2 && maze[i][x+1] == 2 &&
+        maze[i+1][x] == 2 && maze[i+1][x+1] == 2) {
+            return false;
         }
-        std::cout << std::endl;
     }
+    return true;
+}
 
+Maze createDesirableMaze(int width, int height) {
+    while(true) {
+        Maze maze = createRandomMaze(width, height);
+        if(isDesirable(maze)) {
+            return maze;
+        }
+    }
 }
