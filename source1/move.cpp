@@ -56,6 +56,13 @@ int maze[50][50]={};
 struct point
 {
 	int x,y;
+	bool operator==(point secondPoint) {
+		if(x == secondPoint.x && y == secondPoint.y) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 };
 
 point input();
@@ -263,6 +270,7 @@ void ghostINTELEGENCEmove(point &ghost , int superpower, point &pacman , point g
 		ghost.y-=direction.y;
 	}
 	ghostbefore=direction;
+	delete[] aim;
 	return;
 }
 void ghostmove(point &ghost , int superpower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostbefore  , point ghostbeforeArr[])
@@ -271,22 +279,38 @@ void ghostmove(point &ghost , int superpower, point &pacman , point ghostArr[] ,
 	{
 		return;
 	}	
-	point direction;
-	while(1)
-	{	
-		direction.x=(rand()%3)-1;
-		direction.y=0;
-		if(direction.x==0)
-		{
-			direction.y=(rand()%3)-1;
-			if(direction.y)
-			{
-				break;
-			}
-		}else
-		{
-			break;
-		}
+
+	point* aim = new point [5];
+	point direction=ghostbefore;
+	int count=0 , defally = 0 , defallx = 0;
+	if(maze[ghost.x+1][ghost.y]==2 ||maze[ghost.x+1][ghost.y]==3 ||maze[ghost.x+1][ghost.y]==0 )
+	{
+		count++;
+		aim[count]={1,0};
+		defallx=1;
+	}
+	if(maze[ghost.x][ghost.y+1]==2 ||maze[ghost.x][ghost.y+1]==3 || maze[ghost.x][ghost.y+1]==0 )
+	{
+		count++;
+		aim[count]={0,1};
+		defally =1;
+	}
+	if(maze[ghost.x-1][ghost.y]==2 ||maze[ghost.x-1][ghost.y]==3 || maze[ghost.x-1][ghost.y]==0 )
+	{
+		count++;
+		aim[count]={-1,0};
+		defallx=1;
+	}
+	if(maze[ghost.x][ghost.y-1]==2 ||maze[ghost.x][ghost.y-1]==3 || maze[ghost.x][ghost.y-1]==0 )
+	{
+		count++;
+		aim[count]={0,-1};
+		defally=1;
+	}
+	if(count>2 || (count==2 && defallx==1 && defally == 1)) {
+		int temp = (rand() % count) + 1;
+		direction = aim[temp];
+		ghostbefore = direction;
 	}
 	ghost.x+=direction.x;
 	ghost.y+=direction.y;
