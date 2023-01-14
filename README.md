@@ -1,2 +1,2 @@
-# pacman-
+# PacmanPP
 Pacman in c++
