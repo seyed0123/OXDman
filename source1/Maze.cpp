@@ -1,5 +1,14 @@
+#pragma once
+
 #include "Vector.cpp"
 #include "Miscellaneous.cpp"
+
+/*
+Got the idea from:
+https://github.com/shaunlebron/pacman-mazegen
+Algorithm used: randomfill
+*/
+
 
 using Maze = Vector2d;
 using Connection = VectorMap;
@@ -27,6 +36,7 @@ bool isDesirable(Maze maze);
 Maze createDesirableMaze(int width, int height);
 
 
+// Prevents from accessing points outside of the maze dimension
 bool isValidPosition(int x, int y, int width, int height) {
     if(x < 0 || x >= width || y < 0 || y >= height) {
         return false;
@@ -35,6 +45,7 @@ bool isValidPosition(int x, int y, int width, int height) {
     }
 }
 
+// Scans all empty 4x4 squares
 bool canNewBlockFit(Maze& maze, int x, int y, int width, int height) {
     if(isValidPosition(x, y, width, height) && isValidPosition(x+3, y+3, width, height)) {
         for(int j = y; j < y+4; j++) {
@@ -50,6 +61,7 @@ bool canNewBlockFit(Maze& maze, int x, int y, int width, int height) {
     }
 }
 
+// Adds a 2x2 wall block inside a 4x4 square
 void addWallBlock(Maze& maze, int x, int y) {
         for(int i = x+1; i <= x+2; i++) {
             for(int j = y+1; j <= y+2; j++) {
@@ -58,6 +70,7 @@ void addWallBlock(Maze& maze, int x, int y) {
         }
 }
 
+// Get all points corresponding to empty 4x4 squares
 Vector2d getPossibleStarts(Maze& maze) {
     Vector2d possibleStarts;
     for(int y = 0; y < maze.size(); y++) {
@@ -74,97 +87,54 @@ Vector2d getPossibleStarts(Maze& maze) {
 }
 
 Connection getConnections(Maze& maze, Vector2d& possibleStarts) {
-    Connection connections;
-    for(int y = 0; y < maze.size(); y++) {
-        for(int x = 0; x < maze[0].size(); x++) {
-            Vector1d position;
-            position.push_back(x);
-            position.push_back(y);
-            
-            if(possibleStarts.contains(position)) {
-                for(int y0 = 0; y0 < 4; y0++) {
-                    if(!isValidPosition(x-1, y+y0, maze[0].size(), maze.size())) {
-                        continue;
-                    }
-                    if(maze[y+y0][x-1] == 1) {
-                        addConnection(maze, connections, possibleStarts, x, y, 1, 0);
-                        break;
-                    }
-                }
-                for(int y0 = 0; y0 < 4; y0++) {
-                    if(!isValidPosition(x+4, y+y0, maze[0].size(), maze.size())) {
-                        continue;
-                    }
-                    if (maze[y+y0][x+4] == 1) {
-                        addConnection(maze, connections, possibleStarts, x, y, -1 ,0);
-                        break;
-                    }
-                }
-                for(int x0 = 0; x0 < 4; x0++) {
-                    if(!isValidPosition(x+x0, y-1, maze[0].size(), maze.size())) {
-                        continue;
-                    }
-                    if (maze[y-1][x+x0] == 1) {
-                        addConnection(maze, connections, possibleStarts, x, y, 0, 1);
-                        break;
-                    }
-                }
-                for(int x0 = 0; x0 < 4; x0++) {
-                    if(!isValidPosition(x+x0, y+4, maze[0].size(), maze.size())) {
-                        continue;
-                    }
-                    if (maze[y+4][x+x0] == 1) {
-                        addConnection(maze, connections, possibleStarts, x, y, 0, -1);
-                        break;
-                    }
-                }
+    Connection connections;         
+    for(int i = 0; i < possibleStarts.size(); i++) {
+        Vector1d position = possibleStarts[i];
+        int x = position[0];
+        int y = position[1];
+        for(int y0 = 0; y0 < 4; y0++) {
+            if(!isValidPosition(x-1, y+y0, maze[0].size(), maze.size())) {
+                continue;
             }
-
+            if(maze[y+y0][x-1] == 1) {
+                addConnection(maze, connections, possibleStarts, x, y, 1, 0);
+                break;
+            }
+        }
+        for(int y0 = 0; y0 < 4; y0++) {
+            if(!isValidPosition(x+4, y+y0, maze[0].size(), maze.size())) {
+                continue;
+            }
+            if (maze[y+y0][x+4] == 1) {
+                addConnection(maze, connections, possibleStarts, x, y, -1 ,0);
+                break;
+            }
+        }
+        for(int x0 = 0; x0 < 4; x0++) {
+            if(!isValidPosition(x+x0, y-1, maze[0].size(), maze.size())) {
+                continue;
+            }
+            if (maze[y-1][x+x0] == 1) {
+                addConnection(maze, connections, possibleStarts, x, y, 0, 1);
+                break;
+            }
+        }
+        for(int x0 = 0; x0 < 4; x0++) {
+            if(!isValidPosition(x+x0, y+4, maze[0].size(), maze.size())) {
+                continue;
+            }
+            if (maze[y+4][x+x0] == 1) {
+                addConnection(maze, connections, possibleStarts, x, y, 0, -1);
+                break;
+            }
         }
     }
     return connections;
 }
 
 void addConnection(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int dx, int dy) {
-    Vector1d source;
-    source.push_back(x);
-    source.push_back(y);
-    if(possibleStarts.contains(source)) {
-        connect(maze, connections, possibleStarts, x, y, x+dx, y+dy);
-        connect(maze, connections, possibleStarts, x, y, x+2*dx, y+2*dy);
-        Vector1d source2;
-        source2.push_back(x-dy);
-        source2.push_back(y-dx);
-        if(possibleStarts.contains(source2)) {
-            
-        } else {
-            connect(maze, connections, possibleStarts, x, y, x+dx-dy, y+dy-dx);
-        }
-        Vector1d source3;
-        source3.push_back(x+dy);
-        source3.push_back(y+dx);
-        if(possibleStarts.contains(source3)) {
-            
-        } else {
-            connect(maze, connections, possibleStarts, x, y, x+dx+dy, y+dy+dx);
-        }
-        Vector1d source4;
-        source4.push_back(x+dx-dy);
-        source4.push_back(y+dy-dx);
-        if(possibleStarts.contains(source4)) {
-            
-        } else {
-            connect(maze, connections, possibleStarts, x, y, x+2*dx-dy, y+2*dy-dx);
-        }
-        Vector1d source5;
-        source5.push_back(x+dx+dy);
-        source5.push_back(y+dy+dx);
-        if(possibleStarts.contains(source5)) {
-
-        } else {
-            connect(maze, connections, possibleStarts, x, y, x+2*dx+dy, y+2*dy+dx);
-        }
-    }
+    connect(maze, connections, possibleStarts, x, y, x+dx, y+dy);
+    connect(maze, connections, possibleStarts, x, y, x+2*dx, y+2*dy);
 }
 
 void connect(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int x0, int y0) {
@@ -177,8 +147,6 @@ void connect(Maze& maze, Connection& connections, Vector2d& possibleStarts, int 
     
     if(possibleStarts.contains(destination)) {
         connections.add(destination, source);
-    } else {
-        return;
     }
 }
 
@@ -206,16 +174,13 @@ void expand(Maze& maze, Connection& connections, Vector2d& visited, int x, int y
     }
 
     visited.push_back(source);
-    // isInConnections(connections, source)
     if(connections.keyExists(source)) {
         Vector2d connection = connections.getValue(source);
         for(int i = 0; i < connection.size(); i++) {
             int x0 = connection[i][0];
             int y0 = connection[i][1];
 
-            if(!isWallBlockFilled(maze, x0, y0)) {
-                addWallBlock(maze, x0, y0);
-            }
+            addWallBlock(maze, x0, y0);
             expand(maze, connections, visited, x0, y0);
         }
     }
@@ -251,6 +216,7 @@ Maze createEmptyMazeWithGhost(int width, int height) {
     }
     maze.push_back(topWall);
 
+    // Creating ghost house, in the middle
     for(int i = 1; i < (height-5)/2 - 1; i++) {
         Vector1d row;
         row.push_back(1);
@@ -377,22 +343,48 @@ Maze createRandomMaze(int width, int height) {
     maze = removeLastAxis(maze);
     maze = addPointsToMaze(maze);
     maze = addGhostHouse(maze);
-    maze = addSymmetryToMaze(maze);
+    maze = addSymmetryToMaze(maze); 
     return maze;
 }
 
-// Check whether the maze is desirable(no path has width or height more than one)
+// Check whether the maze is desirable
 bool isDesirable(Maze maze) {
-    int x = maze[0].size() / 2 - 1;
-    for(int i = 0; i < maze.size()-1; i++) {
-        if(maze[i][x] == 2 && maze[i][x+1] == 2 &&
-        maze[i+1][x] == 2 && maze[i+1][x+1] == 2) {
-            return false;
+    for(int j = 1; j < maze[0].size() - 1; j++) {
+        for(int i = 1; i < maze.size()-1; i++) {
+            if(maze[i][j] == 2) {
+                // Prevents path with width or height more than one
+                if(maze[i][j+1] == 2 && maze[i+1][j] == 2 && maze[i+1][j+1] == 2) {
+                    return false;
+                }
+
+                // Prevents dead-ends
+                int wallCount = 0;
+                if(maze[i][j+1] == 1) {
+                    wallCount++;
+                }
+                if(maze[i][j-1] == 1) {
+                    wallCount++;
+                }
+                if(maze[i+1][j] == 1) {
+                    wallCount++;
+                }
+                if(maze[i-1][j] == 1) {
+                    wallCount++;
+                }
+                if(wallCount >= 3) {
+                    return false;
+                }   
+            } else if(maze[i][j] == 1) {
+                if(maze[i][j+1] == 2 && maze[i][j-1] == 2) {
+                    return false;
+                }
+            }
         }
     }
     return true;
 }
 
+// Keep creating random mazes until one that holds our standards get created
 Maze createDesirableMaze(int width, int height) {
     while(true) {
         Maze maze = createRandomMaze(width, height);

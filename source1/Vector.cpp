@@ -1,3 +1,6 @@
+#pragma once
+
+
 // One dimensional vector of integers
 class Vector1d {
     private:
