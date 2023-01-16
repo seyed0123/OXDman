@@ -33,6 +33,7 @@ Maze addGhostHouse(Maze maze);
 Maze addSymmetryToMaze(Maze maze);
 Maze createRandomMaze(int width, int height);
 bool isDesirable(Maze maze);
+Maze addPowerPoints(Maze maze);
 Maze createDesirableMaze(int width, int height);
 
 
@@ -384,11 +385,25 @@ bool isDesirable(Maze maze) {
     return true;
 }
 
+Maze addPowerPoints(Maze maze) {
+    int width = maze[0].size();
+    int height = maze.size();
+
+    maze.change(1, 1, 3);
+    maze.change(height-2, 1, 3);
+    maze.change(1, width-2, 3);
+    maze.change(height-2, width-2, 3);
+
+    return maze;
+}
+
+
 // Keep creating random mazes until one that holds our standards get created
 Maze createDesirableMaze(int width, int height) {
     while(true) {
         Maze maze = createRandomMaze(width, height);
         if(isDesirable(maze)) {
+            maze = addPowerPoints(maze);
             return maze;
         }
     }
