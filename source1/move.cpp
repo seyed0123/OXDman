@@ -6,6 +6,7 @@
 
 #include "Vector.cpp"
 #include "Maze.cpp"
+#include "menu.cpp"
 
 // Adding terminal interactivity depending on the OS (Mac currently not supported)
 #ifdef _WIN32
@@ -38,7 +39,7 @@ char getch() {
         return (buf);
 }
 
-bool kbhit()
+int kbhit()
 {
     termios term;
     tcgetattr(0, &term);
@@ -52,7 +53,7 @@ bool kbhit()
 
     tcsetattr(0, TCSANOW, &term);
 
-    return byteswaiting > 0;
+    return byteswaiting;
 }
 #endif
 
@@ -66,43 +67,75 @@ struct point
 };
 
 point input();
-void pacmanMove(point &pacman , point &direction , int &superpower , int record , point before );
-void ghostmove(point &ghost , int superpower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point* ,int *);
-void ghostINTELEGENCEmove(point &ghost , int superpower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point & , point*  , int *);
-int move(int , int , point , point , int);
+void pacmanMove(point &pacman , point &direction , int &superPower , int &record , point before );
+void ghostmove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point* ,int *);
+void ghostINTELEGENCEmove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point & , point*  , int *);
+bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPoint ,int  level ,int& finalRecord);
 void ghostRespawn(point &ghost , point ghostRespawnPoint , int &numJail ,int & record , point&, int* , int );
 void pacmanRespawn(point &pacman , point pacmanRespawnPoint , int &hp ,point ghost[] ,int & numJail , point ghostRespawnPoint , point* , int*);
-bool print( int length,int height, point pacman , point ghost[], int superpower , int record , int  hp);
-bool checkContradiction(point &ghost , point &pacman , int superpower , int &hp , int &record ,point pacmanRespawnPoint , point ghostRespawnPoint , point& , point* , int*);
+string chooseWallUnicode(int row, int col);
+bool print( int length,int height, point pacman , point ghost[], int superPower , int record , int  hp);
+bool checkContradiction(point &ghost , point &pacman , int superPower , int &hp , int &record ,point pacmanRespawnPoint , point ghostRespawnPoint , point& , point* , int*);
+void save(string  username , int level , int width , int height ,int finalRecord);
 
 int main()
 {	
-	int width = 25;
-	width -= width % 2;
-	int height = 30;
-
-	ofstream recordsFile;
-	recordsFile.open("records.save", ios::app);
+	int width;
+	int height;
+	string username;
 	int finalRecord=0;
-	for(int i=4 ; i <= 8 ; i+=2 )
+	int level=0;
+
+	showMenu(username, level, width, height, finalRecord);
+
+	width -= width % 2;
+	ofstream recordsFile;
+	recordsFile.open("ranks.pacman", ios::app);
+	
+	for(; level <= 8 ; level+=2 )
 	{
+		printString("please wait a second.\n the game is being prepared .\n");
+		sleep(2);
 		maze = createDesirableMaze(width, height);
 		point pacmanRespawnPoint={height-2,width/2},ghostRespawnPoint={(height-3)/2-1,width/2-1};
-		int record=move(height,width,pacmanRespawnPoint , ghostRespawnPoint , i);
-		if(record==-10)
+		bool nonDefeat=move(height,width,pacmanRespawnPoint , ghostRespawnPoint , level , finalRecord);
+		
+		if(nonDefeat==0)
 		{
 			break;
 		}else
 		{
-			finalRecord+=record;
+			string confirmation;
+			sevenSegment("chechpoint",2);
+			printString("\ndo yo want to save the game\nyou can oonly save game on checkpoints.\n y/n");
+			cin>>confirmation;
+			if(confirmation=="y")
+			{
+				save(username, level+2 ,width , height , finalRecord);
+			}
 		}
 	}
-	if(recordsFile) {
-		recordsFile<<finalRecord<<endl;
+	if(recordsFile.is_open()) {
+		recordsFile<< username << ":" << finalRecord<<endl;
 		recordsFile.close();
 	}
 
 	return 0;
+}
+void save(string username , int level , int width , int height, int finalRecord)
+{
+	ofstream saveFile;
+	username+=".pacman";
+	saveFile.open(username);
+	if(saveFile.is_open())
+	{
+		saveFile<<finalRecord<<endl<<level<<endl<<width<<endl<<height<<endl;
+		saveFile.close();
+	}else
+	{
+		cout<<"something went wrong.\n";
+	}
+	sleep(1);
 }
 void pacmanRespawn(point &pacman , point pacmanRespawnPoint , int &hp ,point ghost[] ,int & numJail , point ghostRespawnPoint  , point ghostBeforeArr[] , int jail [])
 {
@@ -136,11 +169,11 @@ void pacmanRespawn(point &pacman , point pacmanRespawnPoint , int &hp ,point gho
 	sleep(2);
 	return;
 }
-void ghostRespawn(point &ghost , point ghostRespawnPoint , int &numJail ,int & record , point &ghostbefore , int jail[] , int index)
+void ghostRespawn(point &ghost , point ghostRespawnPoint , int &numJail ,int & record , point &ghostBefore , int jail[] , int index)
 {
 	ghost=ghostRespawnPoint;
-	ghostbefore.x=0;
-	ghostbefore.y=-1;
+	ghostBefore.x=0;
+	ghostBefore.y=-1;
 	for(int i = 1 ; i<= 4 ; i++ )
 	{
 		if(jail[i]==0)
@@ -152,13 +185,14 @@ void ghostRespawn(point &ghost , point ghostRespawnPoint , int &numJail ,int & r
 	numJail++;
 	record+=200;
 	cout<<"+200 point\n";
-	sleep(2);	return;
+	sleep(2);
+	return;
 }
-bool checkContradiction(point &ghost ,point ghostArr[] , point &pacman , int superpower , int &hp , int &record ,int & numJail,point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostbefore ,point ghostBeforeArr[] ,int  jail[] )
+bool checkContradiction(point &ghost ,point ghostArr[] , point &pacman , int superPower , int &hp , int &record ,int & numJail,point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostBefore ,point ghostBeforeArr[] ,int  jail[] )
 {
 	if((ghost.x==pacman.x) && (ghost.y==pacman.y))
 	{
-		if(superpower>0)
+		if(superPower>0)
 		{
 			int index=0;
 			for(int i = 1; i <= 4; i++) 
@@ -168,12 +202,12 @@ bool checkContradiction(point &ghost ,point ghostArr[] , point &pacman , int sup
 					break;
 				}
 			}
-			if((ghostbefore.x==ghostBeforeArr[0].x)&&(ghostbefore.y==ghostBeforeArr[0].y))
+			if((ghostBefore.x==ghostBeforeArr[0].x)&&(ghostBefore.y==ghostBeforeArr[0].y))
 			{
 				ghostRespawn( ghost , ghostRespawnPoint , numJail , record , ghostBeforeArr[index] , jail , index);
 			} else 
 			{
-				ghostRespawn( ghost , ghostRespawnPoint , numJail , record , ghostbefore , jail , index );
+				ghostRespawn( ghost , ghostRespawnPoint , numJail , record , ghostBefore , jail , index );
 			}
 		}else
 		{
@@ -183,9 +217,9 @@ bool checkContradiction(point &ghost ,point ghostArr[] , point &pacman , int sup
 	}
 	return 0;
 }
-void superghost(point &ghost , int superpower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostbefore  , point ghostbeforeArr[] , int jail[])
+void superGhost(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostBefore  , point ghostBeforeArr[] , int jail[])
 {
-	if(checkContradiction(ghost , ghostArr, pacman , superpower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostbefore , ghostbeforeArr , jail ))
+	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail ))
 	{
 		return;
 	}	
@@ -213,7 +247,7 @@ void superghost(point &ghost , int superpower, point &pacman , point ghostArr[] 
 	}
 	ghost.x+=direction.x;
 	ghost.y+=direction.y;
-	if(checkContradiction(ghost , ghostArr, pacman , superpower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostbefore , ghostbeforeArr , jail))
+	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail))
 	{
 		return;
 	} 
@@ -236,22 +270,17 @@ void superghost(point &ghost , int superpower, point &pacman , point ghostArr[] 
 			}
 		}
 	}
-	if(maze[ghost.x][ghost.y]==1 || maze[ghost.x][ghost.y]==-1)
-	{
-		ghost.x-=direction.x;
-		ghost.y-=direction.y;
-	}
 	return;
 }
-void ghostINTELEGENCEmove(point &ghost , int superpower, point &pacman , point ghostArr[]  , int &hp , int &record , int &numJail , point pacmanRespawnPoint ,point ghostRespawnPoint , point &ghostbefore , point ghostbeforeArr[] , int jail[])
+void ghostINTELEGENCEmove(point &ghost , int superPower, point &pacman , point ghostArr[]  , int &hp , int &record , int &numJail , point pacmanRespawnPoint ,point ghostRespawnPoint , point &ghostBefore , point ghostBeforeArr[] , int jail[])
 {
-	if(checkContradiction(ghost , ghostArr, pacman , superpower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostbefore , ghostbeforeArr , jail ))
+	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail ))
 	{
 		return;
 	}
 	
 	point* aim = new point [5];
-	point direction=ghostbefore;
+	point direction=ghostBefore;
 	int count=0 , defally = 0 , defallx = 0;
 	if(maze[ghost.x+1][ghost.y]==2 ||maze[ghost.x+1][ghost.y]==3 ||maze[ghost.x+1][ghost.y]==0 )
 	{
@@ -282,10 +311,9 @@ void ghostINTELEGENCEmove(point &ghost , int superpower, point &pacman , point g
 	{
 		int numOfMin = 0;
 		int* arr = new int [5];
-		pair <int,int> minimum ={pacman.x-ghost.x,pacman.y-ghost.y};
+		pair<int,int> minimum ={pacman.x-ghost.x,pacman.y-ghost.y};
 		for(int i = 1 ; i <= count ; i++)
 		{
-			//cout<<aim[i].x << ' '<< aim[i].y<< endl;
 			if(aim[i].x*minimum.first > 0 || aim[i].y * minimum.second > 0 )
 			{
 				numOfMin++;
@@ -300,22 +328,20 @@ void ghostINTELEGENCEmove(point &ghost , int superpower, point &pacman , point g
 			direction=aim[ra];
 		}
 
-		//cout<<direction.x << ','<< direction.y<< endl;
-		//sleep(2);
 		delete[] arr;
 	}
 	
-	if(superpower>0)
+	if(superPower>0)
 	{
 		direction.x*=-1;
 		direction.y*=-1;
 	}
 	
-	ghostbefore=direction;
+	ghostBefore=direction;
 	ghost.x+=direction.x;
 	ghost.y+=direction.y;
 	
-	if(checkContradiction(ghost , ghostArr, pacman , superpower , hp , record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostbefore , ghostbeforeArr , jail ))
+	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail ))
 	{
 		return;
 	}
@@ -344,19 +370,19 @@ void ghostINTELEGENCEmove(point &ghost , int superpower, point &pacman , point g
 		ghost.x-=direction.x;
 		ghost.y-=direction.y;
 	}
-	ghostbefore=direction;
+	ghostBefore=direction;
 	delete[] aim;
 	return;
 }
-void ghostmove(point &ghost , int superpower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostbefore  , point ghostbeforeArr[] , int jail[])
+void ghostmove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostBefore  , point ghostBeforeArr[] , int jail[])
 {
-	if(checkContradiction(ghost , ghostArr, pacman , superpower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostbefore , ghostbeforeArr , jail ))
+	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail ))
 	{
 		return;
 	}	
 
 	point* aim = new point [5];
-	point direction=ghostbefore;
+	point direction=ghostBefore;
 	int count=0 , defally = 0 , defallx = 0;
 	if(maze[ghost.x+1][ghost.y]==2 ||maze[ghost.x+1][ghost.y]==3 ||maze[ghost.x+1][ghost.y]==0 )
 	{
@@ -385,11 +411,11 @@ void ghostmove(point &ghost , int superpower, point &pacman , point ghostArr[] ,
 	if(count>2 || (count==2 && defallx==1 && defally == 1)) {
 		int temp = (rand() % count) + 1;
 		direction = aim[temp];
-		ghostbefore = direction;
+		ghostBefore = direction;
 	}
 	ghost.x+=direction.x;
 	ghost.y+=direction.y;
-	if(checkContradiction(ghost , ghostArr, pacman , superpower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostbefore , ghostbeforeArr , jail))
+	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail))
 	{
 		return;
 	}
@@ -431,7 +457,7 @@ void ghostmove(point &ghost , int superpower, point &pacman , point ghostArr[] ,
 	delete [] aim;
 	return;
 }
-void pacmanMove(point &pacman , point &direction , int &superpower , int record  , point before)
+void pacmanMove(point &pacman , point &direction , int &superPower , int &record  , point before)
 {
 	if(maze[pacman.x][pacman.y]==2)
 	{
@@ -441,7 +467,7 @@ void pacmanMove(point &pacman , point &direction , int &superpower , int record 
 	{
 		record+=3;
 		maze.change(pacman.x, pacman.y, 0);
-		superpower=10;
+		superPower=20;
 	}
 	pacman.x+=direction.x;
 	pacman.y+=direction.y;
@@ -477,7 +503,7 @@ void pacmanMove(point &pacman , point &direction , int &superpower , int record 
 	{
 		record+=3;
 		maze.change(pacman.x, pacman.y, 0);
-		superpower=10;
+		superPower=20;
 	}
 	return;
 }
@@ -485,6 +511,7 @@ point input()
 {
 	point inp;
 	char input;
+	char nextInput;
 	input = (char)getch();
 	if(input == 'a')
 	{
@@ -503,6 +530,9 @@ point input()
 	{
 		inp.x=0;
 		inp.y=1;
+	}else if(input == 'e')
+	{
+		exit(0);
 	}else if(input=='p')
 	{
 		input=(char )getch();
@@ -515,10 +545,111 @@ point input()
 	}
 	return inp;
 }
-bool print(int length,int height, point pacman , point ghost[] , int superpower , int record , int  hp)
+
+string chooseWallUnicode(int row, int col) {
+	int rows = maze.size();
+	int cols = maze[0].size();
+	if (row == 0 && col == 0) {
+		return "\u2554";
+	} else if (row == rows-1 && col == 0) {
+		return "\u255A";
+	} else if (row == 0 && col == cols-1) {
+		return "\u2557";
+	} else if (row == rows-1 && col == cols-1) {
+		return "\u255D";
+	} else if (row == 0 || row == rows-1) {
+		return "\u2550";
+	} else if(col == 0 || col == cols-1) {
+		return "\u2551";
+	} else {
+		int adjWallCount = 0;
+		bool top = false;
+		bool right = false;
+		bool bottom = false;
+		bool left = false;
+		if(maze[row+1][col] == 1) {
+			adjWallCount++;
+			bottom = true;
+		}
+		if(maze[row-1][col] == 1) {
+			adjWallCount++;
+			top = true;
+		}
+		if(maze[row][col+1] == 1) {
+			adjWallCount++;
+			right = true;
+		}
+		if(maze[row][col-1] == 1) {
+			adjWallCount++;
+			left = true;
+		}
+
+		bool topRight = false;
+		bool topLeft = false;
+		bool bottomRight = false;
+		bool bottomLeft = false;
+		if(maze[row+1][col+1] == 2 || maze[row+1][col+1] == 0) {
+			bottomRight = true;
+		}
+		if(maze[row-1][col-1] == 2 || maze[row-1][col-1] == 0) {
+			topLeft = true;
+		}
+		if(maze[row-1][col+1] == 2 || maze[row-1][col+1] == 0) {
+			topRight = true;
+		}
+		if(maze[row+1][col-1] == 2 || maze[row+1][col-1] == 0) {
+			bottomLeft = true;
+		}
+
+		if(adjWallCount == 4) {
+			if(topRight) {
+				return "\u2514";
+			} else if(topLeft) {
+				return "\u2518";
+			} else if(bottomRight) {
+				return "\u250C";
+			} else if(bottomLeft) {
+				return "\u2510";
+			} else {
+				return " ";
+			}
+		} else if(top && bottom && (right || left)) {
+			return "\u2502";
+		} else if(right && left && (top || bottom)) {
+			return "\u2500";
+		} else if(right && top && !(left || bottom)) {
+			return "\u2514";
+		} else if( bottom && right && !(left || top)) {
+			return "\u250C";
+		} else if( left && bottom && !(right || top)) {
+			return "\u2510";
+		} else if( left && top && !(right || bottom)) {
+			return "\u2518";
+		} else {
+			// other cases are gates
+			return "\u2500";
+		}
+	}
+}
+
+bool print(int length,int height, point pacman , point ghost[] , int superPower , int record , int  hp)
 {
 	bool ret=0;
-	char temp[length][height];
+	string* temp = new string[length*height];
+
+	#ifdef linux
+		string ghostRep = "\u15E3";
+		string pacmanRep = "\u15E7";
+		string superPacmanRep = "\u2B24";
+		string dotRep = "\u22C5";
+		string superRep = "\u2630";
+	#else
+		string ghostRep = "g";
+		string pacmanRep = "p";
+		string superPacmanRep = "S";
+		string dotRep = ".";
+		string superRep = "*";
+	#endif
 	
 	for(int i = 0 ; i < length ; i++)
 	{
@@ -526,63 +657,67 @@ bool print(int length,int height, point pacman , point ghost[] , int superpower 
 		{
 			if(maze[i][j]==0)
 			{
-				temp[i][j]=' ';
+				temp[i+j*length]=" ";
 			}else if(maze[i][j]==1)
 			{
-				temp[i][j]='|';
+				temp[i+j*length]=chooseWallUnicode(i, j);
 			}else if(maze[i][j]==2)
 			{
 				ret=1;
-				temp[i][j]='.';
+				temp[i+j*length]=dotRep;
 			}else if(maze[i][j]==3)
 			{
 				ret=1;
-				temp[i][j]='*';
+				temp[i+j*length]=superRep;
 			}else if(maze[i][j]==-1)
 			{
-				temp[i][j]='-';
+				temp[i+j*length]="\u254D";
 			}
 		}
 	}
-	
-	if(superpower)
+
+	if(superPower)
 	{
-		temp[pacman.x][pacman.y]='S';
-		temp[ghost[1].x][ghost[1].y]='g';
-		temp[ghost[2].x][ghost[2].y]='g';
-		temp[ghost[3].x][ghost[3].y]='g';
-		temp[ghost[4].x][ghost[4].y]='g';	
+		temp[pacman.x+pacman.y*length]=superPacmanRep;
+		temp[ghost[1].x+ghost[1].y*length]=ghostRep;
+		temp[ghost[2].x+ghost[2].y*length]=ghostRep;
+		temp[ghost[3].x+ghost[3].y*length]=ghostRep;
+		temp[ghost[4].x+ghost[4].y*length]=ghostRep;	
 	}else{
-		temp[pacman.x][pacman.y]='p';
-		temp[ghost[1].x][ghost[1].y]='g';
-		temp[ghost[2].x][ghost[2].y]='g';
-		temp[ghost[3].x][ghost[3].y]='g';
-		temp[ghost[4].x][ghost[4].y]='g';
+		temp[pacman.x+pacman.y*length]=pacmanRep;
+		temp[ghost[1].x+ghost[1].y*length]=ghostRep;
+		temp[ghost[2].x+ghost[2].y*length]=ghostRep;
+		temp[ghost[3].x+ghost[3].y*length]=ghostRep;
+		temp[ghost[4].x+ghost[4].y*length]=ghostRep;
 	}
 	
 	for(int i = 0 ; i < length ; i++)
 	{
 		for(int j = 0 ; j < height ; j++)
 		{
-			printf("%c",temp[i][j]);
+			cout << temp[i+j*length];
 		}
 		cout<<endl;
 	}
-	cout<<"record: " << record << " HP: " << hp <<" superpower: " << superpower<<endl;
+	cout<<"record: " << record << " HP: " << hp <<" superPower: " << superPower<<endl;
+
+	delete[] temp;
 	return ret;
 }
-int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPoint ,int  level )
+bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPoint ,int  level ,int& finalRecord)
 {
 	srand(time(0));
-	int hp=3,superpower=0,numJail=0,counterJail=0,record=0;
+	string* win= new string [6];
+	string* lose= new string [6];
+	int hp=3,superPower=0,numJail=0,counterJail=0,record=0;
 	int* jail = new int [5];
-	point* ghostbefore=new point [5];
+	point* ghostBefore=new point [5];
 	point* ghost =new point [5];
 	point pacman=pacmanRespawnPoint,direction={0,1};
-	ghostbefore[1]={0,-1};
-	ghostbefore[2]={0,1};
-	ghostbefore[3]={0,-1};
-	ghostbefore[4]={0,1};
+	ghostBefore[1]={0,-1};
+	ghostBefore[2]={0,1};
+	ghostBefore[3]={0,-1};
+	ghostBefore[4]={0,1};
 
 	jail[1]=1;
 	jail[2]=2;
@@ -596,12 +731,28 @@ int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPo
 	ghost[3].y=ghostRespawnPoint.y+1;
 	ghost[4].x=ghostRespawnPoint.x+1;
 	ghost[4].y=ghostRespawnPoint.y+1;
+	
+	win[0]="Bravo! We knew you could do it.\n";
+	win[1]="We could not be more proud of you.\n";
+	win[2]="You are unstoppable.\n";
+	win[3]="You are truly the GOAT.\n";
+	win[4]="It’s been a long climb, but you aren't finally at the top. I am going to make a round that you can't win it.\n";
+	
+	lose[0]="Shame on you.\nYou have disappointed all the people of Pacman land, prepare yourself for a heavy punishment.\n";
+	lose[1]="a little Shame on you.\nYou have disappointed JUST HALF OF people of Pacman land, prepare yourself for a heavy punishment.\n";
+	lose[2]="May the curse of the Amon gods be upon you.\n prepare yourself for a torment.\n";
+	lose[3]="Ihr Niveau ist zu niedrig.\n";
+	lose[4]="My sense of creativity dried up, Condemn yourself according to your situation.\n";
 
-	cout<<"press w to start.\n";
-	sleep(2);
 	while(1)
 	{
-		if(!print(length, height , pacman , ghost , superpower , record , hp))
+		int scaledRecord;
+		if(level == 0) {
+			scaledRecord = record;
+		} else {
+			scaledRecord = level*record;
+		}
+		if(!print(length, height , pacman , ghost , superPower , scaledRecord+finalRecord , hp))
 		{
 			break;
 		}
@@ -612,9 +763,12 @@ int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPo
 			system("clear");
 		#endif
 		point before=direction;
-		if(kbhit())
+		int keys = kbhit();
+		if(keys > 0)
 		{
-			direction = input();
+			for(int i = 0; i < keys; i++) {
+				direction = input();
+			}
 			if(direction.x==0 && direction.y == 0 )
 			{
 				cout<<"invalid \n";
@@ -622,17 +776,22 @@ int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPo
 			}
 		}
 		
-		pacmanMove(pacman , direction, superpower ,record , before);
+		pacmanMove(pacman , direction, superPower ,record , before);
 
 		for(int i = 1 ; i<= -1*numJail ; i++)
 		{
-			if(checkContradiction(ghost[i] , ghost , pacman , superpower , hp , record, numJail , pacmanRespawnPoint , ghostRespawnPoint ,ghostbefore[0] , ghostbefore , jail))
+			if(checkContradiction(ghost[i] , ghost , pacman , superPower , hp , record, numJail , pacmanRespawnPoint , ghostRespawnPoint ,ghostBefore[0] , ghostBefore , jail))
 			{
 				continue;
 			}
 		}
 
-		if(!print(length, height , pacman , ghost ,superpower , record ,hp))
+		if(level == 0) {
+			scaledRecord = record;
+		} else {
+			scaledRecord = level*record;
+		}
+		if(!print(length, height , pacman , ghost ,superPower , scaledRecord+finalRecord ,hp))
 		{
 			break;
 		}
@@ -643,20 +802,23 @@ int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPo
 			system("clear");
 		#endif
 		before=direction;
-		if(kbhit())
+		keys = kbhit();
+		if(keys > 0)
 		{
-			direction = input();
+			for(int i = 0; i < keys; i++) {
+				direction = input();
+			}
 			if(direction.x==0 && direction.y == 0 )
 			{
 				cout<<"invalid \n";
 				continue;
 			}
 		}
-		pacmanMove(pacman , direction, superpower ,record , before);
+		pacmanMove(pacman , direction, superPower ,record , before);
 
-		if(superpower>0)
+		if(superPower>0)
 		{
-			superpower--;
+			superPower--;
 		}
 		counterJail++;
 
@@ -697,19 +859,19 @@ int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPo
 				{
 					if(i <= level)
 					{
-						ghostINTELEGENCEmove(ghost[i] ,  superpower,  pacman ,  ghost  , hp ,record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostbefore[i] ,ghostbefore , jail );
+						ghostINTELEGENCEmove(ghost[i] ,  superPower,  pacman ,  ghost  , hp ,record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostBefore[i] ,ghostBefore , jail );
 					}else
 					{
-						ghostmove(ghost[i] ,superpower, pacman , ghost , hp , record ,  numJail ,  pacmanRespawnPoint , ghostRespawnPoint , ghostbefore[i] , ghostbefore , jail );
+						ghostmove(ghost[i] ,superPower, pacman , ghost , hp , record ,  numJail ,  pacmanRespawnPoint , ghostRespawnPoint , ghostBefore[i] , ghostBefore , jail );
 					}
 				}else
 				{
 					if(i <= level-4)
 					{
-						superghost(ghost[i] ,superpower, pacman , ghost , hp , record ,  numJail ,  pacmanRespawnPoint , ghostRespawnPoint , ghostbefore[i] , ghostbefore , jail );
+						superGhost(ghost[i] ,superPower, pacman , ghost , hp , record ,  numJail ,  pacmanRespawnPoint , ghostRespawnPoint , ghostBefore[i] , ghostBefore , jail );
 					}else
 					{
-						ghostINTELEGENCEmove(ghost[i] ,  superpower,  pacman ,  ghost  , hp ,record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostbefore[i] ,ghostbefore , jail );
+						ghostINTELEGENCEmove(ghost[i] ,  superPower,  pacman ,  ghost  , hp ,record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostBefore[i] ,ghostBefore , jail );
 					}
 				}
 			}
@@ -717,16 +879,23 @@ int move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPo
 		
 		if(hp==0)
 		{
-			cout<<"Shame on you.\nYou have disappointed all the people of Pacman land, prepare yourself for a heavy punishment.\n";
+			printString(lose[level/2]);
 			sleep(3);
-			return -10;
+			return 0;
 		}
 	}
-	cout<<"congratulations!!!!!\nyou pass this round.\n You will be given a tytab.\n";
+	printString(win[level/2]);
 	sleep(3);
 	if(level == 0) {
-		return record;
+		finalRecord+=record;
 	} else {
-		return level*record;
+		finalRecord+=level*record;
 	}
+
+	delete[] win;
+	delete[] lose;
+	delete[] jail;
+	delete[] ghostBefore;
+	delete[] ghost;
+	return 1;
 }

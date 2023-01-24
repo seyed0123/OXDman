@@ -133,6 +133,7 @@ Connection getConnections(Maze& maze, Vector2d& possibleStarts) {
     return connections;
 }
 
+// moving two points to the desired direction
 void addConnection(Maze& maze, Connection& connections, Vector2d& possibleStarts, int x, int y, int dx, int dy) {
     connect(maze, connections, possibleStarts, x, y, x+dx, y+dy);
     connect(maze, connections, possibleStarts, x, y, x+2*dx, y+2*dy);
@@ -321,13 +322,13 @@ Maze addSymmetryToMaze(Maze maze) {
     Maze symmetricalMaze;
     for(int i = 0; i < maze.size(); i++) {
         Vector1d row;
-        for(int j = 0; j < maze[0].size()-2; j++) {
+        for(int j = 0; j < maze[0].size(); j++) {
             row.push_back(maze[i][j]);
         }
-        for(int j = maze[0].size()-2; j < maze[0].size(); j++) {
-            row.push_back(maze[i][j]);
-        }
-        for(int j = maze[0].size()-3; j >= 0; j--) {
+        // for(int j = maze[0].size()-2; j < maze[0].size(); j++) {
+        //     row.push_back(maze[i][j]);
+        // }
+        for(int j = maze[0].size()-1; j >= 0; j--) {
             row.push_back(maze[i][j]);
         }
         symmetricalMaze.push_back(row);
@@ -336,7 +337,7 @@ Maze addSymmetryToMaze(Maze maze) {
 }
 
 Maze createRandomMaze(int width, int height) {
-    width = width/2 + 2;
+    width = width/2 + 1;
     Maze maze = createEmptyMazeWithGhost(width, height);
     while(addRandomBlock(maze)) {
         continue;
