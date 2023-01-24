@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Vector.cpp"
-#include "Miscellaneous.cpp"
+#include "vector.cpp"
+#include "miscellaneous.cpp"
 
 /*
 Got the idea from:

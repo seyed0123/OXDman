@@ -4,8 +4,8 @@
 #include <fstream>
 
 
-#include "Vector.cpp"
-#include "Maze.cpp"
+#include "vector.cpp"
+#include "maze.cpp"
 #include "menu.cpp"
 
 // Adding terminal interactivity depending on the OS (Mac currently not supported)
@@ -78,50 +78,6 @@ bool print( int length,int height, point pacman , point ghost[], int superPower 
 bool checkContradiction(point &ghost , point &pacman , int superPower , int &hp , int &record ,point pacmanRespawnPoint , point ghostRespawnPoint , point& , point* , int*);
 void save(string  username , int level , int width , int height ,int finalRecord);
 
-int main()
-{	
-	int width;
-	int height;
-	string username;
-	int finalRecord=0;
-	int level=0;
-
-	showMenu(username, level, width, height, finalRecord);
-
-	width -= width % 2;
-	ofstream recordsFile;
-	recordsFile.open("ranks.pacman", ios::app);
-	
-	for(; level <= 8 ; level+=2 )
-	{
-		printString("please wait a second.\n the game is being prepared .\n");
-		sleep(2);
-		maze = createDesirableMaze(width, height);
-		point pacmanRespawnPoint={height-2,width/2},ghostRespawnPoint={(height-3)/2-1,width/2-1};
-		bool nonDefeat=move(height,width,pacmanRespawnPoint , ghostRespawnPoint , level , finalRecord);
-		
-		if(nonDefeat==0)
-		{
-			break;
-		}else
-		{
-			string confirmation;
-			sevenSegment("chechpoint",2);
-			printString("\ndo yo want to save the game\nyou can oonly save game on checkpoints.\n y/n");
-			cin>>confirmation;
-			if(confirmation=="y")
-			{
-				save(username, level+2 ,width , height , finalRecord);
-			}
-		}
-	}
-	if(recordsFile.is_open()) {
-		recordsFile<< username << ":" << finalRecord<<endl;
-		recordsFile.close();
-	}
-
-	return 0;
-}
 void save(string username , int level , int width , int height, int finalRecord)
 {
 	ofstream saveFile;
@@ -740,7 +696,7 @@ bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnP
 	
 	lose[0]="Shame on you.\nYou have disappointed all the people of Pacman land, prepare yourself for a heavy punishment.\n";
 	lose[1]="a little Shame on you.\nYou have disappointed JUST HALF OF people of Pacman land, prepare yourself for a heavy punishment.\n";
-	lose[2]="May the curse of the Amon gods be upon you.\n prepare yourself for a torment.\n";
+	lose[2]="May the curse of the Amon gods be upon you.\nprepare yourself for a torment.\n";
 	lose[3]="Ihr Niveau ist zu niedrig.\n";
 	lose[4]="My sense of creativity dried up, Condemn yourself according to your situation.\n";
 
@@ -881,6 +837,11 @@ bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnP
 		{
 			printString(lose[level/2]);
 			sleep(3);
+			if(level == 0) {
+				finalRecord+=record;
+			} else {
+				finalRecord+=level*record;
+			}
 			return 0;
 		}
 	}
