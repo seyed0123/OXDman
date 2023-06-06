@@ -29,8 +29,8 @@ int main()
 		}else
 		{
 			string confirmation;
-			sevenSegment("chechpoint",2);
-			printString("\ndo yo want to save the game\nyou can oonly save game on checkpoints.\n y/n");
+			sevenSegment("checkpoint",2);
+			printString("\ndo yo want to save the game\nyou can only save game on checkpoints.\n y/n");
 			cin>>confirmation;
 			if(confirmation=="y")
 			{
@@ -39,9 +39,8 @@ int main()
 		}
 	}
 	if(recordsFile.is_open()) {
-		recordsFile<< username << ":" << finalRecord<<endl;
+		recordsFile<< username << ":" << finalRecord <<endl;
 		recordsFile.close();
 	}
-
-	return 0;
+	return finalRecord;
 }

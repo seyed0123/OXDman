@@ -403,7 +403,7 @@ Maze addPowerPoints(Maze maze) {
 Maze createDesirableMaze(int width, int height) {
     while(true) {
         Maze maze = createRandomMaze(width, height);
-        if(isDesirable(maze)) {
+        if(!isDesirable(maze)) {
             maze = addPowerPoints(maze);
             return maze;
         }

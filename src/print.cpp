@@ -3,6 +3,18 @@
 
 
 using namespace std;
+void usleepNew(__int64 usec)
+{
+    HANDLE timer;
+    LARGE_INTEGER ft;
+
+    ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+
+    timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+    WaitForSingleObject(timer, INFINITE);
+    CloseHandle(timer);
+}
 void printString(string n)
 {
 	for(int i =0 ; i <n.size() ; i++ )
@@ -12,7 +24,7 @@ void printString(string n)
 		{
 			sleep(2);
 		}else
-			usleep(60000);
+			usleepNew(60000);
 	}
 }
 void sevenSegment(string n , int b)
@@ -86,5 +98,4 @@ void sevenSegment(string n , int b)
         }
         cout<<endl;
     }
-    //cin>>n;
 }

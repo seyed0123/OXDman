@@ -3,15 +3,12 @@
 #include <unistd.h>
 #include <fstream>
 
-
-#include "vector.cpp"
-#include "maze.cpp"
-#include "menu.cpp"
-
 // Adding terminal interactivity depending on the OS (Mac currently not supported)
 #ifdef _WIN32
 #include <conio.h>
-#include <windows.h> 
+#include <cstdlib>
+#include <conio.h>
+#include <windows.h>
 #endif
 
 #ifdef linux
@@ -57,6 +54,10 @@ int kbhit()
 }
 #endif
 
+#include "vector.cpp"
+#include "maze.cpp"
+#include "menu.cpp"
+
 using namespace std;
 Maze maze;
 
@@ -68,7 +69,7 @@ struct point
 
 point input();
 void pacmanMove(point &pacman , point &direction , int &superPower , int &record , point before );
-void ghostmove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point* ,int *);
+void ghostMove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point* ,int *);
 void ghostINTELEGENCEmove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int& , point , point , point & , point*  , int *);
 bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnPoint ,int  level ,int& finalRecord);
 void ghostRespawn(point &ghost , point ghostRespawnPoint , int &numJail ,int & record , point&, int* , int );
@@ -77,6 +78,7 @@ string chooseWallUnicode(int row, int col);
 bool print( int length,int height, point pacman , point ghost[], int superPower , int record , int  hp);
 bool checkContradiction(point &ghost , point &pacman , int superPower , int &hp , int &record ,point pacmanRespawnPoint , point ghostRespawnPoint , point& , point* , int*);
 void save(string  username , int level , int width , int height ,int finalRecord);
+
 
 void save(string username , int level , int width , int height, int finalRecord)
 {
@@ -330,7 +332,7 @@ void ghostINTELEGENCEmove(point &ghost , int superPower, point &pacman , point g
 	delete[] aim;
 	return;
 }
-void ghostmove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostBefore  , point ghostBeforeArr[] , int jail[])
+void ghostMove(point &ghost , int superPower, point &pacman , point ghostArr[] , int &hp , int &record , int &numJail , point pacmanRespawnPoint , point ghostRespawnPoint , point &ghostBefore  , point ghostBeforeArr[] , int jail[])
 {
 	if(checkContradiction(ghost , ghostArr, pacman , superPower , hp , record ,numJail, pacmanRespawnPoint , ghostRespawnPoint , ghostBefore , ghostBeforeArr , jail ))
 	{
@@ -600,11 +602,11 @@ bool print(int length,int height, point pacman , point ghost[] , int superPower 
 		string dotRep = "\u22C5";
 		string superRep = "\u2630";
 	#else
-		string ghostRep = "g";
-		string pacmanRep = "p";
-		string superPacmanRep = "S";
+		string ghostRep = "☠";
+		string pacmanRep = "◯";
+		string superPacmanRep = "★";
 		string dotRep = ".";
-		string superRep = "*";
+		string superRep = "☆";
 	#endif
 	
 	for(int i = 0 ; i < length ; i++)
@@ -712,9 +714,9 @@ bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnP
 		{
 			break;
 		}
-		usleep(180000);
+		usleepNew(180000);
 		#ifdef _WIN32
-			system("cls");
+            printf("\033c");;
 		#else
 			system("clear");
 		#endif
@@ -751,9 +753,9 @@ bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnP
 		{
 			break;
 		}
-		usleep(180000);
+		usleepNew(180000);
 		#ifdef _WIN32
-			system("cls");
+            printf("\033c");
 		#else
 			system("clear");
 		#endif
@@ -818,7 +820,8 @@ bool move(int length,int  height ,point  pacmanRespawnPoint ,point ghostRespawnP
 						ghostINTELEGENCEmove(ghost[i] ,  superPower,  pacman ,  ghost  , hp ,record , numJail , pacmanRespawnPoint , ghostRespawnPoint , ghostBefore[i] ,ghostBefore , jail );
 					}else
 					{
-						ghostmove(ghost[i] ,superPower, pacman , ghost , hp , record ,  numJail ,  pacmanRespawnPoint , ghostRespawnPoint , ghostBefore[i] , ghostBefore , jail );
+                        ghostMove(ghost[i], superPower, pacman, ghost, hp, record, numJail, pacmanRespawnPoint,
+                                  ghostRespawnPoint, ghostBefore[i], ghostBefore, jail);
 					}
 				}else
 				{
