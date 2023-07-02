@@ -34,8 +34,6 @@ The code provides the following functions:
 - isDesirable: checks whether a maze meets certain standards for playability. Specifically, it checks that there are no paths with a width or height greater than one, and that there are no dead-ends with more than two walls.
 - addPowerPoints: adds power points to the four corners of a maze by changing certain cells to 3's.
 - createDesirableMaze: repeatedly generates random mazes using createRandomMaze until a desirable maze is generated using isDesirable. It then adds power points to the maze and returns the resulting maze.
-Usage
-To use these functions, simply include the header file mazegen.h in your project. You can then create mazes using the createRandomMaze or createDesirableMaze functions, and manipulate the resulting maze using the other functions as needed.
 
 # Pacman Game Mechanics in C++
 This document explains the functions that implement Pacman game mechanics in C++. It covers the movement of ghost characters using AI algorithms, the movement of the Pacman character based on user input, and the display of the game board using Unicode characters. The move() function is also discussed, which simulates the movement of Pacman and ghosts in the game.
