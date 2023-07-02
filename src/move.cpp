@@ -3,11 +3,6 @@
 #include <unistd.h>
 #include <fstream>
 
-
-#include "vector.cpp"
-#include "maze.cpp"
-#include "menu.cpp"
-
 // Adding terminal interactivity depending on the OS (Mac currently not supported)
 #ifdef _WIN32
 #include <conio.h>
@@ -56,6 +51,10 @@ int kbhit()
     return byteswaiting;
 }
 #endif
+
+#include "vector.cpp"
+#include "maze.cpp"
+#include "menu.cpp"
 
 using namespace std;
 Maze maze;
@@ -600,11 +599,11 @@ bool print(int length,int height, point pacman , point ghost[] , int superPower 
 		string dotRep = "\u22C5";
 		string superRep = "\u2630";
 	#else
-		string ghostRep = "g";
+		string ghostRep = "☠";
 		string pacmanRep = "p";
-		string superPacmanRep = "S";
+		string superPacmanRep = "$";
 		string dotRep = ".";
-		string superRep = "*";
+		string superRep = "✹";
 	#endif
 	
 	for(int i = 0 ; i < length ; i++)
